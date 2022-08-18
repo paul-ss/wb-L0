@@ -47,7 +47,7 @@ type PgConn struct {
 
 func (pg *PgConn) StoreOrder(id string, data []byte) error {
 	_, err := pg.db.Exec(
-		"insert into messages (id, data) "+
+		"insert into orders (id, data) "+
 			"values ($1, $2) ",
 		id, data)
 

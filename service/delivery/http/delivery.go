@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/paul-ss/wb-L0/service/domain"
 	"github.com/paul-ss/wb-L0/service/usecase"
+	log "github.com/sirupsen/logrus"
 	"net/http"
 )
 
@@ -20,8 +21,9 @@ type Handler struct {
 func (h *Handler) GetOrderById(w http.ResponseWriter, r *http.Request) {
 	id := r.URL.Query().Get("id")
 	order, err := h.uc.GetOrderById(id)
+
 	if err != nil {
-		fmt.Println(err.Error())
+		log.Error("http delivery: " + err.Error())
 	}
 
 	fmt.Fprintln(w, order)
