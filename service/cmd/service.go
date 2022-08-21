@@ -53,7 +53,7 @@ func NewHttpServer() *http.Server {
 	mux := http.NewServeMux()
 
 	handler := http2.NewHandler()
-	mux.HandleFunc("/", handler.GetOrderById)
+	mux.HandleFunc("/", handler.MainPage)
 
 	return &http.Server{Addr: config.ServerAddress, Handler: mux}
 }

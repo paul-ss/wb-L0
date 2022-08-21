@@ -5,26 +5,44 @@ import (
 	"github.com/paul-ss/wb-L0/service/domain"
 	"github.com/paul-ss/wb-L0/service/usecase"
 	log "github.com/sirupsen/logrus"
+	"html/template"
 	"net/http"
 )
 
 func NewHandler() *Handler {
-	return &Handler{
-		uc: usecase.NewUsecase(),
+	h := &Handler{
+		uc:   usecase.NewUsecase(),
+		tmpl: make(map[string]*template.Template),
 	}
+
+	h.tmpl["index"] = template.Must(template.New("index.html").
+		ParseFiles("service/web/public/index.html"))
+	return h
 }
 
 type Handler struct {
-	uc domain.Usecase
+	uc   domain.Usecase
+	tmpl map[string]*template.Template
 }
 
-func (h *Handler) GetOrderById(w http.ResponseWriter, r *http.Request) {
-	id := r.URL.Query().Get("id")
-	order, err := h.uc.GetOrderById(id)
+type IndexData struct {
+	Id    string
+	Order string
+}
 
-	if err != nil {
-		log.Error("http delivery: " + err.Error())
+func (h *Handler) MainPage(w http.ResponseWriter, r *http.Request) {
+	fmt.Printf(":%s:\n", r.URL.Path)
+
+	indexData := IndexData{
+		Id: r.URL.Query().Get("id"),
 	}
 
-	fmt.Fprintln(w, order)
+	order, err := h.uc.GetOrderById(indexData.Id)
+	if err == nil {
+		indexData.Order = string(order)
+	}
+
+	if err = h.tmpl["index"].Execute(w, indexData); err != nil {
+		log.Error("execute template" + err.Error())
+	}
 }
