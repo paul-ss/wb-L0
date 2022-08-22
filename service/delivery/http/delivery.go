@@ -1,48 +1,70 @@
 package http
 
 import (
-	"fmt"
 	"github.com/paul-ss/wb-L0/service/domain"
-	"github.com/paul-ss/wb-L0/service/usecase"
+	"github.com/paul-ss/wb-L0/service/repository/cache"
 	log "github.com/sirupsen/logrus"
 	"html/template"
 	"net/http"
+	"path/filepath"
+)
+
+const (
+	mainPageName = "index.html"
+	templatesDir = "service/web/public"
 )
 
 func NewHandler() *Handler {
 	h := &Handler{
-		uc:   usecase.NewUsecase(),
+		repo: cache.NewCache(),
 		tmpl: make(map[string]*template.Template),
 	}
 
-	h.tmpl["index"] = template.Must(template.New("index.html").
-		ParseFiles("service/web/public/index.html"))
+	h.tmpl[mainPageName] = template.Must(template.New(mainPageName).
+		ParseFiles(filepath.Join(templatesDir, mainPageName)))
 	return h
 }
 
 type Handler struct {
-	uc   domain.Usecase
+	repo domain.Cache
 	tmpl map[string]*template.Template
 }
 
-type IndexData struct {
+type MainPageData struct {
 	Id    string
 	Order string
 }
 
 func (h *Handler) MainPage(w http.ResponseWriter, r *http.Request) {
-	fmt.Printf(":%s:\n", r.URL.Path)
+	if r.URL.Path != "/" {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
 
-	indexData := IndexData{
+	indexData := MainPageData{
 		Id: r.URL.Query().Get("id"),
 	}
 
-	order, err := h.uc.GetOrderById(indexData.Id)
+	order, err := h.repo.GetOrderById(indexData.Id)
 	if err == nil {
 		indexData.Order = string(order)
 	}
 
-	if err = h.tmpl["index"].Execute(w, indexData); err != nil {
+	if err = h.tmpl[mainPageName].Execute(w, indexData); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
 		log.Error("execute template" + err.Error())
+	}
+}
+
+func RecoverMiddleware(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			if err := recover(); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				log.Error("recover mw: ", err)
+			}
+		}()
+
+		next(w, r)
 	}
 }

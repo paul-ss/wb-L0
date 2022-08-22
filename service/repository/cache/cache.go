@@ -9,9 +9,8 @@ var (
 	cache *Cache
 )
 
-// Cache TODO threadsafe??
 type Cache struct {
-	pg domain.Repository
+	pg domain.Database
 	m  map[string][]byte
 }
 

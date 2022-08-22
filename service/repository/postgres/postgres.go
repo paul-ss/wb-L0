@@ -2,10 +2,9 @@ package postgres
 
 import (
 	"database/sql"
-	"fmt"
 	_ "github.com/lib/pq"
 	"github.com/paul-ss/wb-L0/service/config"
-	"os"
+	log "github.com/sirupsen/logrus"
 )
 
 var (
@@ -34,7 +33,7 @@ func Close() {
 	if conn != nil && conn.db != nil {
 		err := conn.db.Close()
 		if err != nil {
-			fmt.Fprintln(os.Stderr, err.Error())
+			log.Error("db close: ", err.Error())
 		}
 
 		conn = nil
@@ -63,4 +62,25 @@ func (pg *PgConn) GetOrderById(id string) ([]byte, error) {
 		id).Scan(&order)
 
 	return order, err
+}
+
+func (pg *PgConn) UpdateLastMsgId(sub string, id uint64) error {
+	_, err := pg.db.Exec(
+		"insert into messages (subId, lastMsgId) "+
+			"values ($1, $2) "+
+			"on conflict (subId) "+
+			"do update "+
+			"set lastMsgId = $2 ", sub, id)
+	return err
+}
+
+func (pg *PgConn) GetLastMsgId(sub string) (id uint64, ok bool) {
+	if err := pg.db.QueryRow(
+		"select lastMsgId from messages "+
+			"where subId = $1", sub).Scan(&id); err != nil {
+		return
+	}
+
+	ok = true
+	return
 }
